@@ -45,11 +45,7 @@ public class SeasonalVisibilityLibraryListener : IHostedService
             if (!itemTags.Contains(rule.Tag, StringComparer.OrdinalIgnoreCase))
                 continue;
 
-            var startParts = rule.StartDate.Split('-');
-            var endParts = rule.EndDate.Split('-');
-            var startDate = new DateTime(today.Year, int.Parse(startParts[0]), int.Parse(startParts[1]));
-            var endDate = new DateTime(today.Year, int.Parse(endParts[0]), int.Parse(endParts[1]));
-            bool inSeason = today >= startDate && today <= endDate;
+            bool inSeason = SeasonalVisibilityTask.IsInSeason(today, rule.StartDate, rule.EndDate);
 
             foreach (var user in users)
             {

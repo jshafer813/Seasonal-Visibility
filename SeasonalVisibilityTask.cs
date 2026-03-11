@@ -35,7 +35,6 @@ public class SeasonalVisibilityTask : IScheduledTask
 
             foreach (var user in users)
             {
-                // Skip admins so they can always see everything
                 var userDto = _userManager.GetUserDto(user);
                 if (userDto.Policy?.IsAdministrator == true)
                     continue;
@@ -67,12 +66,25 @@ public class SeasonalVisibilityTask : IScheduledTask
         }
     }
 
-    private static bool IsInSeason(DateTime today, string start, string end)
+    public static bool IsInSeason(DateTime today, string start, string end)
     {
         var startParts = start.Split('-');
         var endParts = end.Split('-');
-        var startDate = new DateTime(today.Year, int.Parse(startParts[0]), int.Parse(startParts[1]));
-        var endDate   = new DateTime(today.Year, int.Parse(endParts[0]),   int.Parse(endParts[1]));
+        int startMonth = int.Parse(startParts[0]);
+        int startDay = int.Parse(startParts[1]);
+        int endMonth = int.Parse(endParts[0]);
+        int endDay = int.Parse(endParts[1]);
+
+        var startDate = new DateTime(today.Year, startMonth, startDay);
+        var endDate = new DateTime(today.Year, endMonth, endDay);
+
+        // Cross-year season e.g. Dec 20 - Jan 5
+        if (startDate > endDate)
+        {
+            // We're in season if today is after start OR before end
+            return today >= startDate || today <= endDate;
+        }
+
         return today >= startDate && today <= endDate;
     }
 
