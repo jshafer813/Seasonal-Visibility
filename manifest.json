@@ -9,10 +9,10 @@
     "description": "A Jellyfin plugin that automatically hides and reveals movies based on real-world seasons and holidays. Tag your Christmas movies with christmas, Halloween films with halloween, and more.",
     "versions": [
       {
-        "version": "1.0.3.0",
-        "changelog": "Fixed cross-year season support, unblock on uninstall, and added checksum verification.",
+        "version": "1.0.4.0",
+        "changelog": "Added checksum verification and unblock on uninstall.",
         "targetAbi": "10.11.6.0",
-        "sourceUrl": "https://github.com/jshafer813/Seasonal-Visibility/releases/download/v1.0.3/Jellyfin.Plugin.SeasonalVisibility.dll",
+        "sourceUrl": "https://github.com/jshafer813/Seasonal-Visibility/releases/download/v1.0.4/Jellyfin.Plugin.SeasonalVisibility.dll",
         "checksum": "2be47d6f67cccbcee5510b7341a4429a",
         "timestamp": "2026-03-11T00:00:00Z"
       }
