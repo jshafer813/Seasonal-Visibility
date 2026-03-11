@@ -1,0 +1,21 @@
+[
+  {
+    "category": "General",
+    "guid": "1bad62ca-f2cb-4962-9d1e-b5737da03bfd",
+    "imageUrl": "https://raw.githubusercontent.com/jshafer813/Seasonal-Visibility/main/seasonal-visibility-logo.png",
+    "name": "Seasonal Visibility",
+    "overview": "Automatically hides and reveals movies based on real-world seasons and holidays.",
+    "owner": "jshafer813",
+    "description": "A Jellyfin plugin that automatically hides and reveals movies based on real-world seasons and holidays. Tag your Christmas movies with christmas, Halloween films with halloween, and more.",
+    "versions": [
+      {
+        "version": "1.0.2.0",
+        "changelog": "Added live library listener for instant visibility changes when tags are updated.",
+        "targetAbi": "10.11.6.0",
+        "sourceUrl": "https://github.com/jshafer813/Seasonal-Visibility/releases/download/v1.0.2/Jellyfin.Plugin.SeasonalVisibility.dll",
+        "checksum": "",
+        "timestamp": "2026-03-11T00:00:00Z"
+      }
+    ]
+  }
+]
