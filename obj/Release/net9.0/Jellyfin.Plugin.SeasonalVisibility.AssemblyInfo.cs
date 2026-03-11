@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Jellyfin.Plugin.SeasonalVisibility")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+73afbb9e1492a5df05e0f60441f14733d4073032")]
 [assembly: System.Reflection.AssemblyProductAttribute("Jellyfin.Plugin.SeasonalVisibility")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Jellyfin.Plugin.SeasonalVisibility")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
