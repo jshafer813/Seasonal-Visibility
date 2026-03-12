@@ -67,12 +67,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: ./dist/Jellyfin.Plugin.SeasonalVisibility.dll
-          body: |
-            ## Seasonal Visibility ${{ github.ref_name }}
-
-            Install via repository URL:
-```
-            https://raw.githubusercontent.com/${{ github.repository }}/main/manifest.json
-```
+          body: "Install via repository URL: https://raw.githubusercontent.com/${{ github.repository }}/main/manifest.json"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
