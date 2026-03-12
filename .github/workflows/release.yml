@@ -1,0 +1,58 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Build
+        run: dotnet publish -c Release -o ./dist
+
+      - name: Get checksum
+        id: checksum
+        run: echo "md5=$(md5sum ./dist/Jellyfin.Plugin.SeasonalVisibility.dll | awk '{print $1}')" >> $GITHUB_OUTPUT
+
+      - name: Get version
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Update manifest checksum
+        run: |
+          sed -i "s/\"checksum\": \".*\"/\"checksum\": \"${{ steps.checksum.outputs.md5 }}\"/" manifest.json
+          sed -i "s/\"version\": \".*\"/\"version\": \"${{ steps.version.outputs.version }}.0\"/" manifest.json
+          sed -i "s|\"sourceUrl\": \".*\"|\"sourceUrl\": \"https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/Jellyfin.Plugin.SeasonalVisibility.dll\"|" manifest.json
+
+      - name: Commit updated manifest
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add manifest.json
+          git commit -m "Update manifest for ${{ github.ref_name }}" || echo "No changes to commit"
+          git push origin HEAD:main
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./dist/Jellyfin.Plugin.SeasonalVisibility.dll
+          body: |
+            ## Seasonal Visibility ${{ github.ref_name }}
+
+            Install via repository URL:
+```
+            https://raw.githubusercontent.com/${{ github.repository }}/main/manifest.json
+```
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,6 +1,7 @@
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Users;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.SeasonalVisibility;
 
@@ -8,22 +9,26 @@ public class SeasonalVisibilityLibraryListener : IHostedService
 {
     private readonly ILibraryManager _libraryManager;
     private readonly IUserManager _userManager;
+    private readonly ILogger<SeasonalVisibilityLibraryListener> _logger;
 
-    public SeasonalVisibilityLibraryListener(ILibraryManager libraryManager, IUserManager userManager)
+    public SeasonalVisibilityLibraryListener(ILibraryManager libraryManager, IUserManager userManager, ILogger<SeasonalVisibilityLibraryListener> logger)
     {
         _libraryManager = libraryManager;
         _userManager = userManager;
+        _logger = logger;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
         _libraryManager.ItemUpdated += OnItemUpdated;
+        _logger.LogInformation("SeasonalVisibility: Library listener started");
         return Task.CompletedTask;
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
         _libraryManager.ItemUpdated -= OnItemUpdated;
+        _logger.LogInformation("SeasonalVisibility: Library listener stopped");
         return Task.CompletedTask;
     }
 
@@ -37,6 +42,8 @@ public class SeasonalVisibilityLibraryListener : IHostedService
         var seasonalTags = config.Rules.Select(r => r.Tag).ToHashSet(StringComparer.OrdinalIgnoreCase);
         if (!itemTags.Any(t => seasonalTags.Contains(t)))
             return;
+
+        _logger.LogInformation("SeasonalVisibility: Detected tag update on '{Item}', reapplying visibility", item.Name);
 
         var users = _userManager.Users.ToList();
 
@@ -63,6 +70,7 @@ public class SeasonalVisibilityLibraryListener : IHostedService
                         blockedTags.Add(rule.Tag);
                         policy.BlockedTags = blockedTags.ToArray();
                         await _userManager.UpdatePolicyAsync(user.Id, policy).ConfigureAwait(false);
+                        _logger.LogInformation("SeasonalVisibility: Blocked tag '{Tag}' for user '{User}'", rule.Tag, user.Username);
                     }
                 }
                 else
@@ -73,6 +81,7 @@ public class SeasonalVisibilityLibraryListener : IHostedService
                             .Where(t => !t.Equals(rule.Tag, StringComparison.OrdinalIgnoreCase))
                             .ToArray();
                         await _userManager.UpdatePolicyAsync(user.Id, policy).ConfigureAwait(false);
+                        _logger.LogInformation("SeasonalVisibility: Unblocked tag '{Tag}' for user '{User}'", rule.Tag, user.Username);
                     }
                 }
             }
