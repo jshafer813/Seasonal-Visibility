@@ -23,17 +23,37 @@ jobs:
 
       - name: Get checksum
         id: checksum
-        run: echo "md5=$(md5sum ./dist/Jellyfin.Plugin.SeasonalVisibility.dll | awk '{print $1}')" >> $GITHUB_OUTPUT
+        run: |
+          MD5=$(md5sum ./dist/Jellyfin.Plugin.SeasonalVisibility.dll | awk '{print $1}')
+          echo "md5=$MD5" >> $GITHUB_OUTPUT
 
       - name: Get version
         id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
-
-      - name: Update manifest checksum
         run: |
-          sed -i "s/\"checksum\": \".*\"/\"checksum\": \"${{ steps.checksum.outputs.md5 }}\"/" manifest.json
-          sed -i "s/\"version\": \".*\"/\"version\": \"${{ steps.version.outputs.version }}.0\"/" manifest.json
-          sed -i "s|\"sourceUrl\": \".*\"|\"sourceUrl\": \"https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/Jellyfin.Plugin.SeasonalVisibility.dll\"|" manifest.json
+          VERSION=${GITHUB_REF_NAME#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update manifest
+        run: |
+          python3 - << 'PYEOF'
+          import json, os
+          with open('manifest.json', 'r') as f:
+              manifest = json.load(f)
+          version = os.environ['VERSION'] + '.0'
+          checksum = os.environ['CHECKSUM']
+          ref = os.environ['REF']
+          repo = os.environ['REPO']
+          manifest[0]['versions'][0]['version'] = version
+          manifest[0]['versions'][0]['checksum'] = checksum
+          manifest[0]['versions'][0]['sourceUrl'] = f'https://github.com/{repo}/releases/download/{ref}/Jellyfin.Plugin.SeasonalVisibility.dll'
+          with open('manifest.json', 'w') as f:
+              json.dump(manifest, f, indent=2)
+          PYEOF
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          CHECKSUM: ${{ steps.checksum.outputs.md5 }}
+          REF: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
 
       - name: Commit updated manifest
         run: |
