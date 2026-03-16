@@ -13,6 +13,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -54,10 +55,32 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git checkout main
+          git pull origin main
+          # reapply manifest change on top of latest main
+          python3 - << 'PYEOF'
+          import json, os
+          with open('manifest.json', 'r') as f:
+              manifest = json.load(f)
+          version = os.environ['VERSION'] + '.0'
+          checksum = os.environ['CHECKSUM']
+          ref = os.environ['REF']
+          repo = os.environ['REPO']
+          manifest[0]['versions'][0]['version'] = version
+          manifest[0]['versions'][0]['checksum'] = checksum
+          manifest[0]['versions'][0]['sourceUrl'] = f'https://github.com/{repo}/releases/download/{ref}/Jellyfin.Plugin.SeasonalVisibility.dll'
+          with open('manifest.json', 'w') as f:
+              json.dump(manifest, f, indent=2)
+          PYEOF
           git add manifest.json
-          git commit -m "Update manifest for ${{ github.ref_name }}" || echo "No changes to commit"
-          git pull --rebase origin main
-          git push origin HEAD:main
+          git diff --staged --quiet || git commit -m "Update manifest for ${{ github.ref_name }}"
+          git push origin main
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          CHECKSUM: ${{ steps.checksum.outputs.md5 }}
+          REF: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
