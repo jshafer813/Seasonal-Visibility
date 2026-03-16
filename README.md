@@ -85,4 +85,4 @@ Dates can be entered manually in MM-DD format, or use the 📅 button to auto-fi
 
 ---
 
-> ⚠️ **Disclaimer:** This plugin was developed with the assistance of AI (Claude by Anthropic). All code has been tested and is running on a personal Jellyfin server.
+> ⚠️ **Disclaimer:** This plugin was developed with the some assistance of AI
