@@ -1,3 +1,4 @@
+using System.Globalization;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Controller.Library;
@@ -6,7 +7,7 @@ using MediaBrowser.Model.Serialization;
 
 namespace Jellyfin.Plugin.SeasonalVisibility;
 
-public class Plugin : BasePlugin<PluginConfiguration>, IDisposable
+public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IDisposable
 {
     public static Plugin? Instance { get; private set; }
     public override string Name => "Seasonal Visibility";
@@ -22,34 +23,40 @@ public class Plugin : BasePlugin<PluginConfiguration>, IDisposable
         _userManager = userManager;
     }
 
+    /// <inheritdoc />
+    public IEnumerable<PluginPageInfo> GetPages()
+    {
+        return new[]
+        {
+            new PluginPageInfo
+            {
+                Name = Name,
+                EmbeddedResourcePath = string.Format(CultureInfo.InvariantCulture, "{0}.Configuration.configPage.html", GetType().Namespace),
+                EnableInMainMenu = true,
+                MenuSection = "server",
+                MenuIcon = "event"
+            }
+        };
+    }
+
     public void Dispose()
     {
-        // When plugin is uninstalled or disabled, remove all seasonal blocked tags from all users
         var config = Configuration;
         var users = _userManager.Users.ToList();
-
         foreach (var user in users)
         {
             var userDto = _userManager.GetUserDto(user);
-            if (userDto.Policy?.IsAdministrator == true)
-                continue;
-
+            if (userDto.Policy?.IsAdministrator == true) continue;
             var policy = userDto.Policy;
-            if (policy?.BlockedTags == null)
-                continue;
-
+            if (policy?.BlockedTags == null) continue;
             var seasonalTags = config.Rules.Select(r => r.Tag).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var cleanedTags = policy.BlockedTags
-                .Where(t => !seasonalTags.Contains(t))
-                .ToArray();
-
+            var cleanedTags = policy.BlockedTags.Where(t => !seasonalTags.Contains(t)).ToArray();
             if (cleanedTags.Length != policy.BlockedTags.Length)
             {
                 policy.BlockedTags = cleanedTags;
                 _userManager.UpdatePolicyAsync(user.Id, policy).GetAwaiter().GetResult();
             }
         }
-
         GC.SuppressFinalize(this);
     }
 }
