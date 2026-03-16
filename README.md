@@ -73,6 +73,7 @@ Dates can be entered manually in MM-DD format, or use the 📅 button to auto-fi
 
 ## 📜 Changelog
 
+- **v2.2.0** — Security fixes: XSS protection, date validation, async exception handling
 - **v2.1.0** — Auto-registers config script with JavaScript Injector on install
 - **v2.0.0** — Interactive config UI, smart holiday date auto-fill, auto-apply on save
 - **v1.0.5** — TV show support, logging, GitHub Actions automated releases
@@ -81,3 +82,7 @@ Dates can be entered manually in MM-DD format, or use the 📅 button to auto-fi
 - **v1.0.2** — Live library listener for instant visibility changes
 - **v1.0.1** — Admin users skipped
 - **v1.0.0** — Initial release
+
+---
+
+> ⚠️ **Disclaimer:** This plugin was developed with the assistance of AI (Claude by Anthropic). All code has been tested and is running on a personal Jellyfin server.
