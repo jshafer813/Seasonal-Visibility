@@ -4,10 +4,18 @@
     "guid": "1bad62ca-f2cb-4962-9d1e-b5737da03bfd",
     "imageUrl": "https://raw.githubusercontent.com/jshafer813/Seasonal-Visibility/main/seasonal-visibility-logo.png",
     "name": "Seasonal Visibility",
-    "overview": "Automatically hides and reveals movies based on real-world seasons and holidays.",
+    "overview": "Automatically hides and reveals movies & TV shows based on real-world seasons and holidays.",
     "owner": "jshafer813",
-    "description": "A Jellyfin plugin that automatically hides and reveals movies based on real-world seasons and holidays. Tag your Christmas movies with christmas, Halloween films with halloween, and more.",
+    "description": "A Jellyfin plugin that automatically hides and reveals movies & TV shows based on real-world seasons and holidays. Tag your Christmas movies with christmas, Halloween films with halloween, and more.",
     "versions": [
+      {
+        "version": "2.0.0.0",
+        "changelog": "Added interactive config UI, smart holiday date auto-fill, and auto-apply on save.",
+        "targetAbi": "10.11.6.0",
+        "sourceUrl": "https://github.com/jshafer813/Seasonal-Visibility/releases/download/v2.0.0/Jellyfin.Plugin.SeasonalVisibility.dll",
+        "checksum": "8f5ea2e53faf793ddb24844f19e870e2",
+        "timestamp": "2026-03-15T00:00:00Z"
+      },
       {
         "version": "1.0.5.0",
         "changelog": "Added checksum verification and unblock on uninstall.",
