@@ -37,7 +37,13 @@ public class SeasonalVisibilityTask : IScheduledTask
         foreach (var rule in config.Rules)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            bool inSeason = IsInSeason(today, rule.StartDate, rule.EndDate);
+
+            if (!TryIsInSeason(today, rule.StartDate, rule.EndDate, out bool inSeason))
+            {
+                _logger.LogWarning("SeasonalVisibility: Skipping rule with invalid dates — Tag: '{Tag}', Start: '{Start}', End: '{End}'", rule.Tag, rule.StartDate, rule.EndDate);
+                progress.Report(++processed * 100.0 / config.Rules.Count);
+                continue;
+            }
 
             _logger.LogInformation("SeasonalVisibility: Tag '{Tag}' is {Status}", rule.Tag, inSeason ? "IN season" : "OUT of season");
 
@@ -78,22 +84,46 @@ public class SeasonalVisibilityTask : IScheduledTask
         _logger.LogInformation("SeasonalVisibility: Task complete");
     }
 
+    public static bool TryIsInSeason(DateTime today, string start, string end, out bool inSeason)
+    {
+        inSeason = false;
+        try
+        {
+            var startParts = start.Split('-');
+            var endParts = end.Split('-');
+            if (startParts.Length != 2 || endParts.Length != 2)
+                return false;
+
+            int startMonth = int.Parse(startParts[0]);
+            int startDay = int.Parse(startParts[1]);
+            int endMonth = int.Parse(endParts[0]);
+            int endDay = int.Parse(endParts[1]);
+
+            if (startMonth < 1 || startMonth > 12 || endMonth < 1 || endMonth > 12)
+                return false;
+            if (startDay < 1 || startDay > 31 || endDay < 1 || endDay > 31)
+                return false;
+
+            var startDate = new DateTime(today.Year, startMonth, startDay);
+            var endDate = new DateTime(today.Year, endMonth, endDay);
+
+            inSeason = startDate > endDate
+                ? today >= startDate || today <= endDate
+                : today >= startDate && today <= endDate;
+
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    // Keep old signature for compatibility
     public static bool IsInSeason(DateTime today, string start, string end)
     {
-        var startParts = start.Split('-');
-        var endParts = end.Split('-');
-        int startMonth = int.Parse(startParts[0]);
-        int startDay = int.Parse(startParts[1]);
-        int endMonth = int.Parse(endParts[0]);
-        int endDay = int.Parse(endParts[1]);
-
-        var startDate = new DateTime(today.Year, startMonth, startDay);
-        var endDate = new DateTime(today.Year, endMonth, endDay);
-
-        if (startDate > endDate)
-            return today >= startDate || today <= endDate;
-
-        return today >= startDate && today <= endDate;
+        TryIsInSeason(today, start, end, out bool result);
+        return result;
     }
 
     public IEnumerable<TaskTriggerInfo> GetDefaultTriggers() => new[]

@@ -34,57 +34,68 @@ public class SeasonalVisibilityLibraryListener : IHostedService
 
     private async void OnItemUpdated(object? sender, ItemChangeEventArgs e)
     {
-        var config = Plugin.Instance!.Configuration;
-        var today = DateTime.Now;
-        var item = e.Item;
-        var itemTags = item.Tags ?? Array.Empty<string>();
-
-        var seasonalTags = config.Rules.Select(r => r.Tag).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        if (!itemTags.Any(t => seasonalTags.Contains(t)))
-            return;
-
-        _logger.LogInformation("SeasonalVisibility: Detected tag update on '{Item}', reapplying visibility", item.Name);
-
-        var users = _userManager.Users.ToList();
-
-        foreach (var rule in config.Rules)
+        try
         {
-            if (!itemTags.Contains(rule.Tag, StringComparer.OrdinalIgnoreCase))
-                continue;
+            var config = Plugin.Instance!.Configuration;
+            var today = DateTime.Now;
+            var item = e.Item;
+            var itemTags = item.Tags ?? Array.Empty<string>();
 
-            bool inSeason = SeasonalVisibilityTask.IsInSeason(today, rule.StartDate, rule.EndDate);
+            var seasonalTags = config.Rules.Select(r => r.Tag).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            if (!itemTags.Any(t => seasonalTags.Contains(t)))
+                return;
 
-            foreach (var user in users)
+            _logger.LogInformation("SeasonalVisibility: Detected tag update on '{Item}', reapplying visibility", item.Name);
+
+            var users = _userManager.Users.ToList();
+
+            foreach (var rule in config.Rules)
             {
-                var userDto = _userManager.GetUserDto(user);
-                if (userDto.Policy?.IsAdministrator == true)
+                if (!itemTags.Contains(rule.Tag, StringComparer.OrdinalIgnoreCase))
                     continue;
 
-                var policy = userDto.Policy ?? new UserPolicy();
-                var blockedTags = (policy.BlockedTags ?? Array.Empty<string>()).ToList();
-
-                if (!inSeason)
+                if (!SeasonalVisibilityTask.TryIsInSeason(today, rule.StartDate, rule.EndDate, out bool inSeason))
                 {
-                    if (!blockedTags.Contains(rule.Tag, StringComparer.OrdinalIgnoreCase))
-                    {
-                        blockedTags.Add(rule.Tag);
-                        policy.BlockedTags = blockedTags.ToArray();
-                        await _userManager.UpdatePolicyAsync(user.Id, policy).ConfigureAwait(false);
-                        _logger.LogInformation("SeasonalVisibility: Blocked tag '{Tag}' for user '{User}'", rule.Tag, user.Username);
-                    }
+                    _logger.LogWarning("SeasonalVisibility: Skipping rule with invalid dates — Tag: '{Tag}'", rule.Tag);
+                    continue;
                 }
-                else
+
+                foreach (var user in users)
                 {
-                    if (blockedTags.Contains(rule.Tag, StringComparer.OrdinalIgnoreCase))
+                    var userDto = _userManager.GetUserDto(user);
+                    if (userDto.Policy?.IsAdministrator == true)
+                        continue;
+
+                    var policy = userDto.Policy ?? new UserPolicy();
+                    var blockedTags = (policy.BlockedTags ?? Array.Empty<string>()).ToList();
+
+                    if (!inSeason)
                     {
-                        policy.BlockedTags = blockedTags
-                            .Where(t => !t.Equals(rule.Tag, StringComparison.OrdinalIgnoreCase))
-                            .ToArray();
-                        await _userManager.UpdatePolicyAsync(user.Id, policy).ConfigureAwait(false);
-                        _logger.LogInformation("SeasonalVisibility: Unblocked tag '{Tag}' for user '{User}'", rule.Tag, user.Username);
+                        if (!blockedTags.Contains(rule.Tag, StringComparer.OrdinalIgnoreCase))
+                        {
+                            blockedTags.Add(rule.Tag);
+                            policy.BlockedTags = blockedTags.ToArray();
+                            await _userManager.UpdatePolicyAsync(user.Id, policy).ConfigureAwait(false);
+                            _logger.LogInformation("SeasonalVisibility: Blocked tag '{Tag}' for user '{User}'", rule.Tag, user.Username);
+                        }
+                    }
+                    else
+                    {
+                        if (blockedTags.Contains(rule.Tag, StringComparer.OrdinalIgnoreCase))
+                        {
+                            policy.BlockedTags = blockedTags
+                                .Where(t => !t.Equals(rule.Tag, StringComparison.OrdinalIgnoreCase))
+                                .ToArray();
+                            await _userManager.UpdatePolicyAsync(user.Id, policy).ConfigureAwait(false);
+                            _logger.LogInformation("SeasonalVisibility: Unblocked tag '{Tag}' for user '{User}'", rule.Tag, user.Username);
+                        }
                     }
                 }
             }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "SeasonalVisibility: Unhandled exception in OnItemUpdated");
         }
     }
 }

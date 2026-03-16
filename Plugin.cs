@@ -26,6 +26,15 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IDisposable
 (function () {
     var pluginId = '1bad62ca-f2cb-4962-9d1e-b5737da03bfd';
 
+    function escHtml(str) {
+        return String(str || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     function getEaster(year) {
         var a = year % 19, b = Math.floor(year / 100), c = year % 100;
         var d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
@@ -83,14 +92,16 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IDisposable
     }
 
     function isInSeason(startStr, endStr) {
-        var today = new Date();
-        var todayVal = (today.getMonth() + 1) * 100 + today.getDate();
-        var parts = startStr.split('-');
-        var startVal = parseInt(parts[0]) * 100 + parseInt(parts[1]);
-        parts = endStr.split('-');
-        var endVal = parseInt(parts[0]) * 100 + parseInt(parts[1]);
-        if (startVal > endVal) return todayVal >= startVal || todayVal <= endVal;
-        return todayVal >= startVal && todayVal <= endVal;
+        try {
+            var today = new Date();
+            var todayVal = (today.getMonth() + 1) * 100 + today.getDate();
+            var parts = startStr.split('-');
+            var startVal = parseInt(parts[0]) * 100 + parseInt(parts[1]);
+            parts = endStr.split('-');
+            var endVal = parseInt(parts[0]) * 100 + parseInt(parts[1]);
+            if (startVal > endVal) return todayVal >= startVal || todayVal <= endVal;
+            return todayVal >= startVal && todayVal <= endVal;
+        } catch(e) { return false; }
     }
 
     function addRuleRow(tag, description, start, end) {
@@ -102,12 +113,12 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IDisposable
             : '—';
         tr.innerHTML =
             '<td style="padding:4px 8px;">' +
-                '<input type="text" class="rule-tag emby-input" value="' + (tag||'') + '" placeholder="e.g. christmas" style="width:120px;" />' +
+                '<input type="text" class="rule-tag emby-input" value="' + escHtml(tag) + '" placeholder="e.g. christmas" style="width:120px;" />' +
                 '<button type="button" class="auto-dates-btn" title="Auto-fill dates" style="background:none;border:none;cursor:pointer;color:#00a4dc;font-size:1em;padding:2px 4px;">📅</button>' +
             '</td>' +
-            '<td style="padding:4px 8px;"><input type="text" class="rule-description emby-input" value="' + (description||'') + '" placeholder="e.g. Christmas Season" style="width:160px;" /></td>' +
-            '<td style="padding:4px 8px;"><input type="text" class="rule-start emby-input" value="' + (start||'') + '" placeholder="12-01" style="width:80px;" maxlength="5" /></td>' +
-            '<td style="padding:4px 8px;"><input type="text" class="rule-end emby-input" value="' + (end||'') + '" placeholder="01-05" style="width:80px;" maxlength="5" /></td>' +
+            '<td style="padding:4px 8px;"><input type="text" class="rule-description emby-input" value="' + escHtml(description) + '" placeholder="e.g. Christmas Season" style="width:160px;" /></td>' +
+            '<td style="padding:4px 8px;"><input type="text" class="rule-start emby-input" value="' + escHtml(start) + '" placeholder="12-01" style="width:80px;" maxlength="5" /></td>' +
+            '<td style="padding:4px 8px;"><input type="text" class="rule-end emby-input" value="' + escHtml(end) + '" placeholder="01-05" style="width:80px;" maxlength="5" /></td>' +
             '<td style="padding:4px 8px;" class="rule-status">' + statusLabel + '</td>' +
             '<td style="padding:4px 8px;"><button type="button" class="raised emby-button delete-btn" style="background:none;color:#e05353;padding:2px 10px;">✕</button></td>';
         function updateStatus() {
@@ -123,7 +134,7 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IDisposable
             var tagVal = tr.querySelector('.rule-tag').value.trim();
             var dates = getSmartDates(tagVal);
             if (dates) { tr.querySelector('.rule-start').value = dates.start; tr.querySelector('.rule-end').value = dates.end; updateStatus(); }
-            else { alert('No smart dates for "' + tagVal + '". Supported: easter, thanksgiving, halloween, christmas, mothers day, fathers day, valentines, new year, summer, st patrick, hanukkah'); }
+            else { alert('No smart dates for "' + escHtml(tagVal) + '". Supported: easter, thanksgiving, halloween, christmas, mothers day, fathers day, valentines, new year, summer, st patrick, hanukkah'); }
         });
         tr.querySelector('.rule-start').addEventListener('input', updateStatus);
         tr.querySelector('.rule-end').addEventListener('input', updateStatus);
