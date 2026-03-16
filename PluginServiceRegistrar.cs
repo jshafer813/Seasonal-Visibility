@@ -12,5 +12,6 @@ public class PluginServiceRegistrar : IPluginServiceRegistrator
     {
         serviceCollection.AddSingleton<IScheduledTask, SeasonalVisibilityTask>();
         serviceCollection.AddSingleton<IHostedService, SeasonalVisibilityLibraryListener>();
+        serviceCollection.AddSingleton<IHostedService, SeasonalVisibilityJsRegistrar>();
     }
 }

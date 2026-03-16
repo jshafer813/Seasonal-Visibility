@@ -73,6 +73,7 @@ Dates can be entered manually in MM-DD format, or use the 📅 button to auto-fi
 
 ## 📜 Changelog
 
+- **v3.0.0** — Multiple tags per rule, enable/disable toggle, conflict detection, preview mode, tag suggestions dropdown, activity log, collections support, security fixes
 - **v2.2.0** — Security fixes: XSS protection, date validation, async exception handling
 - **v2.1.0** — Auto-registers config script with JavaScript Injector on install
 - **v2.0.0** — Interactive config UI, smart holiday date auto-fill, auto-apply on save

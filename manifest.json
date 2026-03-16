@@ -9,11 +9,19 @@
     "description": "A Jellyfin plugin that automatically hides and reveals movies & TV shows based on real-world seasons and holidays. Tag your Christmas movies with christmas, Halloween films with halloween, and more.",
     "versions": [
       {
+        "version": "3.0.0.0",
+        "changelog": "v3.0.0: Multiple tags per rule, rule enable/disable toggle, conflict detection, preview mode, tag suggestions dropdown, activity log, collections support, security fixes.",
+        "targetAbi": "10.11.6.0",
+        "sourceUrl": "https://github.com/jshafer813/Seasonal-Visibility/releases/download/v3.0.0/Jellyfin.Plugin.SeasonalVisibility.dll",
+        "checksum": "3ecec9229c014705ef5e1f32f9afbbd5",
+        "timestamp": "2026-03-16T00:00:00Z"
+      },
+      {
         "version": "2.2.0.0",
-        "changelog": "Security fixes: XSS protection, dead code removed, date validation, async exception handling.",
+        "changelog": "Security fixes: XSS protection, date validation, async exception handling.",
         "targetAbi": "10.11.6.0",
         "sourceUrl": "https://github.com/jshafer813/Seasonal-Visibility/releases/download/v2.2.0/Jellyfin.Plugin.SeasonalVisibility.dll",
-        "checksum": "3a20876972ba0dc734b0c424154244cb",
+        "checksum": "86ec2f2109228c55874bf59322660b3d",
         "timestamp": "2026-03-15T00:00:00Z"
       },
       {
@@ -21,7 +29,7 @@
         "changelog": "Auto-registers config UI script with JavaScript Injector on install.",
         "targetAbi": "10.11.6.0",
         "sourceUrl": "https://github.com/jshafer813/Seasonal-Visibility/releases/download/v2.1.0/Jellyfin.Plugin.SeasonalVisibility.dll",
-        "checksum": "ab649db61c689a1c995ec20a6f634637",
+        "checksum": "966091168cf6d19275a4888cf55a53b7",
         "timestamp": "2026-03-15T00:00:00Z"
       },
       {

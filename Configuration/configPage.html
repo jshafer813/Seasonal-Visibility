@@ -16,19 +16,20 @@
             <div class="verticalSection">
                 <h3 class="sectionTitle">Season Rules</h3>
                 <p class="fieldDescription">
-                    Each rule maps a tag to a date range (MM-DD format). Content tagged with that tag
-                    will only be visible during that window. Cross-year ranges are supported
-                    (e.g. Dec 1 – Jan 5).
+                    Each rule maps one or more tags (comma separated) to a date range (MM-DD format).
+                    Cross-year ranges are supported (e.g. Dec 1 – Jan 5).
                 </p>
 
                 <table id="rulesTable" class="tblConfigTable" style="width:100%; border-collapse:collapse; margin-bottom:1em;">
                     <thead>
                         <tr>
-                            <th style="text-align:left; padding:6px 8px;">Tag</th>
+                            <th style="text-align:left; padding:6px 8px;">Tags</th>
                             <th style="text-align:left; padding:6px 8px;">Description</th>
                             <th style="text-align:left; padding:6px 8px;">Start (MM-DD)</th>
                             <th style="text-align:left; padding:6px 8px;">End (MM-DD)</th>
                             <th style="text-align:left; padding:6px 8px;">In Season?</th>
+                            <th style="text-align:center; padding:6px 8px;">Enabled</th>
+                            <th style="padding:6px 8px;"></th>
                             <th style="padding:6px 8px;"></th>
                         </tr>
                     </thead>
@@ -49,6 +50,13 @@
             </div>
 
             <div id="saveStatus" style="margin-top:1em;"></div>
+
+            <br/>
+            <div class="verticalSection">
+                <h3 class="sectionTitle">Activity Log</h3>
+                <p class="fieldDescription">Last 50 visibility changes applied by the plugin.</p>
+                <div id="activityLog" style="margin-top:0.5em;"></div>
+            </div>
         </div>
     </div>
 </body>

@@ -20,11 +20,10 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IDisposable
     private readonly IUserManager _userManager;
     private readonly ILogger<Plugin> _logger;
 
-    private const string ScriptId = "1bad62ca-f2cb-4962-9d1e-b5737da03bfd-config-script";
-
-    private const string ConfigScript = """
+    public const string ConfigScript = """
 (function () {
     var pluginId = '1bad62ca-f2cb-4962-9d1e-b5737da03bfd';
+    var allLibraryTags = [];
 
     function escHtml(str) {
         return String(str || '')
@@ -104,71 +103,261 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IDisposable
         } catch(e) { return false; }
     }
 
-    function addRuleRow(tag, description, start, end) {
+    function fetchLibraryTags() {
+        var userId = ApiClient.getCurrentUserId();
+        ApiClient.ajax({ type: 'GET', url: ApiClient.getUrl('Items', { Recursive: true, IncludeItemTypes: 'Movie,Series', Fields: 'Tags', Limit: 2000, UserId: userId }) }).then(function(result) {
+            var tagSet = {};
+            (result.Items || []).forEach(function(item) {
+                (item.Tags || []).forEach(function(t) { tagSet[t] = true; });
+            });
+            allLibraryTags = Object.keys(tagSet).sort();
+        }).catch(function() {});
+    }
+
+    function showTagDropdown(input, tagsCell) {
+        var existing = tagsCell.querySelector('.sv-tag-dropdown');
+        if (existing) existing.remove();
+
+        var val = input.value.split(',').pop().trim().toLowerCase();
+        var already = input.value.split(',').map(function(x){ return x.trim().toLowerCase(); });
+        var matches = allLibraryTags.filter(function(t) {
+            return t.toLowerCase().includes(val) && !already.includes(t.toLowerCase());
+        }).slice(0, 10);
+
+        if (!matches.length) return;
+
+        var dd = document.createElement('div');
+        dd.className = 'sv-tag-dropdown';
+        dd.style.cssText = 'position:absolute;background:#1e1e1e;border:1px solid #444;border-radius:4px;z-index:9999;max-height:200px;overflow-y:auto;min-width:160px;box-shadow:0 4px 12px rgba(0,0,0,0.5);';
+
+        matches.forEach(function(tag) {
+            var item = document.createElement('div');
+            item.textContent = tag;
+            item.style.cssText = 'padding:6px 12px;cursor:pointer;color:#ddd;font-size:0.9em;';
+            item.addEventListener('mouseenter', function() { item.style.background = '#00a4dc'; item.style.color = '#fff'; });
+            item.addEventListener('mouseleave', function() { item.style.background = ''; item.style.color = '#ddd'; });
+            item.addEventListener('mousedown', function(e) {
+                e.preventDefault();
+                var parts = input.value.split(',').map(function(x){ return x.trim(); }).filter(Boolean);
+                parts.pop();
+                parts.push(tag);
+                input.value = parts.join(', ');
+                dd.remove();
+                input.focus();
+            });
+            dd.appendChild(item);
+        });
+
+        tagsCell.style.position = 'relative';
+        tagsCell.appendChild(dd);
+        input.addEventListener('blur', function() { setTimeout(function() { if (dd.parentNode) dd.remove(); }, 150); }, { once: true });
+    }
+
+    function addRuleRow(ruleId, tags, description, start, end, enabled) {
         var tbody = document.getElementById('rulesBody');
         if (!tbody) return;
+        if (enabled === undefined) enabled = true;
+        var tagsStr = Array.isArray(tags) ? tags.join(', ') : (tags || '');
         var tr = document.createElement('tr');
-        var statusLabel = (tag && start && end)
-            ? (isInSeason(start, end) ? '<span style="color:#4CAF50;">✔ In Season</span>' : '<span style="color:#aaa;">✘ Out of Season</span>')
-            : '—';
+        tr.dataset.ruleId = ruleId || ('rule-' + Date.now());
+        if (!enabled) tr.style.opacity = '0.5';
+
+        var statusLabel = '—';
+        if (tagsStr && start && end) {
+            statusLabel = isInSeason(start, end)
+                ? '<span style="color:#4CAF50;">✔ In Season</span>'
+                : '<span style="color:#aaa;">✘ Out of Season</span>';
+        }
+
         tr.innerHTML =
-            '<td style="padding:4px 8px;">' +
-                '<input type="text" class="rule-tag emby-input" value="' + escHtml(tag) + '" placeholder="e.g. christmas" style="width:120px;" />' +
-                '<button type="button" class="auto-dates-btn" title="Auto-fill dates" style="background:none;border:none;cursor:pointer;color:#00a4dc;font-size:1em;padding:2px 4px;">📅</button>' +
+            '<td style="padding:4px 8px;min-width:180px;">' +
+                '<div style="display:flex;align-items:center;gap:4px;">' +
+                    '<input type="text" class="rule-tags emby-input" value="' + escHtml(tagsStr) + '" placeholder="christmas, xmas" style="width:140px;" />' +
+                    '<button type="button" class="auto-dates-btn" title="Auto-fill dates" style="background:none;border:none;cursor:pointer;color:#00a4dc;font-size:1em;padding:2px;">📅</button>' +
+                '</div>' +
             '</td>' +
-            '<td style="padding:4px 8px;"><input type="text" class="rule-description emby-input" value="' + escHtml(description) + '" placeholder="e.g. Christmas Season" style="width:160px;" /></td>' +
-            '<td style="padding:4px 8px;"><input type="text" class="rule-start emby-input" value="' + escHtml(start) + '" placeholder="12-01" style="width:80px;" maxlength="5" /></td>' +
-            '<td style="padding:4px 8px;"><input type="text" class="rule-end emby-input" value="' + escHtml(end) + '" placeholder="01-05" style="width:80px;" maxlength="5" /></td>' +
+            '<td style="padding:4px 8px;">' +
+                '<input type="text" class="rule-description emby-input" value="' + escHtml(description) + '" placeholder="e.g. Christmas Season" style="width:150px;" />' +
+            '</td>' +
+            '<td style="padding:4px 8px;">' +
+                '<input type="text" class="rule-start emby-input" value="' + escHtml(start) + '" placeholder="12-01" style="width:70px;" maxlength="5" />' +
+            '</td>' +
+            '<td style="padding:4px 8px;">' +
+                '<input type="text" class="rule-end emby-input" value="' + escHtml(end) + '" placeholder="01-05" style="width:70px;" maxlength="5" />' +
+            '</td>' +
             '<td style="padding:4px 8px;" class="rule-status">' + statusLabel + '</td>' +
-            '<td style="padding:4px 8px;"><button type="button" class="raised emby-button delete-btn" style="background:none;color:#e05353;padding:2px 10px;">✕</button></td>';
+            '<td style="padding:4px 8px;text-align:center;">' +
+                '<input type="checkbox" class="rule-enabled" ' + (enabled ? 'checked' : '') + ' title="Enable/disable rule" style="width:18px;height:18px;cursor:pointer;" />' +
+            '</td>' +
+            '<td style="padding:4px 8px;">' +
+                '<button type="button" class="preview-btn raised emby-button" style="background:#333;color:#ddd;padding:2px 8px;font-size:0.8em;">Preview</button>' +
+            '</td>' +
+            '<td style="padding:4px 8px;">' +
+                '<button type="button" class="raised emby-button delete-btn" style="background:none;color:#e05353;padding:2px 10px;">✕</button>' +
+            '</td>';
+
+        var tagsInput = tr.querySelector('.rule-tags');
+        var tagsCell = tr.querySelector('td:first-child');
+
         function updateStatus() {
-            var t = tr.querySelector('.rule-tag').value.trim();
             var s = tr.querySelector('.rule-start').value.trim();
             var e = tr.querySelector('.rule-end').value.trim();
+            var t = tagsInput.value.trim();
             var cell = tr.querySelector('.rule-status');
             if (t && s && e && /^\d{2}-\d{2}$/.test(s) && /^\d{2}-\d{2}$/.test(e)) {
-                cell.innerHTML = isInSeason(s, e) ? '<span style="color:#4CAF50;">✔ In Season</span>' : '<span style="color:#aaa;">✘ Out of Season</span>';
+                cell.innerHTML = isInSeason(s, e)
+                    ? '<span style="color:#4CAF50;">✔ In Season</span>'
+                    : '<span style="color:#aaa;">✘ Out of Season</span>';
             } else { cell.innerHTML = '—'; }
         }
-        tr.querySelector('.auto-dates-btn').addEventListener('click', function () {
-            var tagVal = tr.querySelector('.rule-tag').value.trim();
-            var dates = getSmartDates(tagVal);
-            if (dates) { tr.querySelector('.rule-start').value = dates.start; tr.querySelector('.rule-end').value = dates.end; updateStatus(); }
-            else { alert('No smart dates for "' + escHtml(tagVal) + '". Supported: easter, thanksgiving, halloween, christmas, mothers day, fathers day, valentines, new year, summer, st patrick, hanukkah'); }
+
+        tagsInput.addEventListener('input', function() {
+            updateStatus();
+            showTagDropdown(tagsInput, tagsCell);
         });
+        tagsInput.addEventListener('focus', function() {
+            showTagDropdown(tagsInput, tagsCell);
+        });
+
+        tr.querySelector('.auto-dates-btn').addEventListener('click', function() {
+            var firstTag = tagsInput.value.split(',')[0].trim();
+            var dates = getSmartDates(firstTag);
+            if (dates) {
+                tr.querySelector('.rule-start').value = dates.start;
+                tr.querySelector('.rule-end').value = dates.end;
+                updateStatus();
+            } else {
+                alert('No smart dates for "' + escHtml(firstTag) + '". Supported: easter, thanksgiving, halloween, christmas, mothers day, fathers day, valentines, new year, summer, st patrick, hanukkah');
+            }
+        });
+
         tr.querySelector('.rule-start').addEventListener('input', updateStatus);
         tr.querySelector('.rule-end').addEventListener('input', updateStatus);
-        tr.querySelector('.rule-tag').addEventListener('input', updateStatus);
-        tr.querySelector('.delete-btn').addEventListener('click', function () { tr.remove(); });
+
+        tr.querySelector('.rule-enabled').addEventListener('change', function() {
+            tr.style.opacity = this.checked ? '1' : '0.5';
+        });
+
+        tr.querySelector('.preview-btn').addEventListener('click', function() {
+            var tags = tagsInput.value.split(',').map(function(t){ return t.trim(); }).filter(Boolean);
+            var s = tr.querySelector('.rule-start').value.trim();
+            var e = tr.querySelector('.rule-end').value.trim();
+            var desc = tr.querySelector('.rule-description').value.trim();
+            if (!tags.length || !s || !e) { alert('Fill in tags and dates first.'); return; }
+            var inSeason = isInSeason(s, e);
+            ApiClient.ajax({
+                type: 'GET',
+                url: ApiClient.getUrl('Items', { Tags: tags, Recursive: true, IncludeItemTypes: 'Movie,Series', Fields: 'Name' })
+            }).then(function(result) {
+                var items = result.Items || [];
+                var msg = '"' + escHtml(desc || tags.join(', ')) + '" — ' + (inSeason ? '✔ IN season' : '✘ OUT of season') + '\n\n';
+                msg += items.length + ' item(s) affected:\n';
+                items.slice(0, 20).forEach(function(item) { msg += '  • ' + item.Name + '\n'; });
+                if (items.length > 20) msg += '  ...and ' + (items.length - 20) + ' more';
+                alert(msg);
+            }).catch(function() { alert('Could not fetch preview.'); });
+        });
+
+        tr.querySelector('.delete-btn').addEventListener('click', function() { tr.remove(); });
         tbody.appendChild(tr);
     }
 
     function loadConfig() {
-        ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+        fetchLibraryTags();
+        ApiClient.getPluginConfiguration(pluginId).then(function(config) {
             document.getElementById('rulesBody').innerHTML = '';
-            (config.Rules || []).forEach(function (r) { addRuleRow(r.Tag, r.Description, r.StartDate, r.EndDate); });
+            (config.Rules || []).forEach(function(r) {
+                try {
+                    var tags = r.Tags && r.Tags.length ? r.Tags : (r.Tag ? [r.Tag] : []);
+                    addRuleRow(r.Id, tags, r.Description, r.StartDate, r.EndDate, r.Enabled !== false);
+                } catch(err) {
+                    console.error('SeasonalVisibility: addRuleRow failed', err, r);
+                }
+            });
+            renderActivityLog(config.ActivityLog || []);
+        }).catch(function(err) {
+            console.error('SeasonalVisibility: loadConfig failed', err);
         });
     }
 
+    function renderActivityLog(log) {
+        var container = document.getElementById('activityLog');
+        if (!container) return;
+        if (!log.length) { container.innerHTML = '<p style="color:#888;font-size:0.9em;">No activity yet.</p>'; return; }
+        var html = '<table style="width:100%;border-collapse:collapse;font-size:0.85em;">' +
+            '<thead><tr>' +
+            '<th style="text-align:left;padding:4px 8px;color:#aaa;border-bottom:1px solid #333;">Time</th>' +
+            '<th style="text-align:left;padding:4px 8px;color:#aaa;border-bottom:1px solid #333;">Tag</th>' +
+            '<th style="text-align:left;padding:4px 8px;color:#aaa;border-bottom:1px solid #333;">Action</th>' +
+            '<th style="text-align:left;padding:4px 8px;color:#aaa;border-bottom:1px solid #333;">User</th>' +
+            '</tr></thead><tbody>';
+        log.slice().reverse().slice(0, 50).forEach(function(entry) {
+            var ts = new Date(entry.Timestamp).toLocaleString();
+            var color = entry.Action === 'unblocked' ? '#4CAF50' : '#e05353';
+            html += '<tr>' +
+                '<td style="padding:3px 8px;color:#888;">' + escHtml(ts) + '</td>' +
+                '<td style="padding:3px 8px;color:#ddd;">' + escHtml(entry.Tag) + '</td>' +
+                '<td style="padding:3px 8px;color:' + color + ';">' + escHtml(entry.Action) + '</td>' +
+                '<td style="padding:3px 8px;color:#ddd;">' + escHtml(entry.Username) + '</td>' +
+                '</tr>';
+        });
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    }
+
     function triggerTask() {
-        ApiClient.ajax({ type: 'GET', url: ApiClient.getUrl('ScheduledTasks') }).then(function (tasks) {
-            var task = tasks.find(function (t) { return t.Name === 'Apply Seasonal Visibility'; });
+        ApiClient.ajax({ type: 'GET', url: ApiClient.getUrl('ScheduledTasks') }).then(function(tasks) {
+            var taskList = Array.isArray(tasks) ? tasks : (tasks.Items || []);
+            var task = taskList.find(function(t) { return t.Name === 'Apply Seasonal Visibility'; });
             if (task) ApiClient.ajax({ type: 'POST', url: ApiClient.getUrl('ScheduledTasks/Running/' + task.Id) });
         });
     }
 
     function saveConfig() {
         var rules = [];
-        document.querySelectorAll('#rulesBody tr').forEach(function (tr) {
-            var tag = tr.querySelector('.rule-tag').value.trim();
-            if (tag) rules.push({ Tag: tag, Description: tr.querySelector('.rule-description').value.trim(), StartDate: tr.querySelector('.rule-start').value.trim(), EndDate: tr.querySelector('.rule-end').value.trim() });
+        var tagMap = {};
+        var hasConflict = false;
+
+        document.querySelectorAll('#rulesBody tr[data-rule-id]').forEach(function(tr) {
+            var tagsRaw = tr.querySelector('.rule-tags').value.trim();
+            var tags = tagsRaw.split(',').map(function(t){ return t.trim(); }).filter(Boolean);
+            if (!tags.length) return;
+
+            var enabled = tr.querySelector('.rule-enabled').checked;
+            if (enabled) {
+                tags.forEach(function(tag) {
+                    var lower = tag.toLowerCase();
+                    tagMap[lower] = (tagMap[lower] || 0) + 1;
+                    if (tagMap[lower] > 1) hasConflict = true;
+                });
+            }
+
+            rules.push({
+                Id: tr.dataset.ruleId,
+                Tags: tags,
+                Description: tr.querySelector('.rule-description').value.trim(),
+                StartDate: tr.querySelector('.rule-start').value.trim(),
+                EndDate: tr.querySelector('.rule-end').value.trim(),
+                Enabled: enabled,
+                CollectionIds: []
+            });
         });
-        ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+
+        if (hasConflict) {
+            var conflictTags = Object.keys(tagMap).filter(function(t){ return tagMap[t] > 1; });
+            if (!confirm('⚠️ Conflict detected: tag(s) "' + conflictTags.join(', ') + '" appear in multiple enabled rules. Save anyway?')) return;
+        }
+
+        ApiClient.getPluginConfiguration(pluginId).then(function(config) {
             config.Rules = rules;
-            ApiClient.updatePluginConfiguration(pluginId, config).then(function () {
+            ApiClient.updatePluginConfiguration(pluginId, config).then(function() {
                 triggerTask();
                 var status = document.getElementById('saveStatus');
-                if (status) { status.style.color = '#4CAF50'; status.textContent = '✔ Saved & applied.'; setTimeout(function () { status.textContent = ''; }, 5000); }
+                if (status) {
+                    status.style.color = '#4CAF50';
+                    status.textContent = '✔ Saved & applied.';
+                    setTimeout(function() { status.textContent = ''; loadConfig(); }, 3000);
+                }
             });
         });
     }
@@ -176,16 +365,31 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IDisposable
     function initPage() {
         var addBtn = document.getElementById('addRuleBtn');
         var saveBtn = document.getElementById('saveBtn');
-        if (addBtn) addBtn.addEventListener('click', function () { addRuleRow('', '', '', ''); });
-        if (saveBtn) saveBtn.addEventListener('click', function () { saveConfig(); });
+        if (addBtn) addBtn.addEventListener('click', function() { addRuleRow('rule-' + Date.now(), [], '', '', '', true); });
+        if (saveBtn) saveBtn.addEventListener('click', saveConfig);
         loadConfig();
     }
 
-    document.addEventListener('viewshow', function (e) {
+    var pageInitialized = false;
+
+    function safeInitPage() {
+        if (pageInitialized) return;
+        pageInitialized = true;
+        initPage();
+    }
+
+    document.addEventListener('viewshow', function(e) {
         var page = e.target;
         if (!page || page.id !== 'SeasonalVisibilityConfigPage') return;
-        initPage();
+        pageInitialized = false;
+        safeInitPage();
     }, true);
+
+    // Handle case where page is already loaded when script runs
+    var alreadyLoaded = document.getElementById('SeasonalVisibilityConfigPage');
+    if (alreadyLoaded && alreadyLoaded.classList.contains('mainAnimatedPage')) {
+        safeInitPage();
+    }
 })();
 """;
 
@@ -195,47 +399,15 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IDisposable
         Instance = this;
         _userManager = userManager;
         _logger = logger;
-        RegisterWithJsInjector();
-    }
 
-    private void RegisterWithJsInjector()
-    {
-        try
+        // Seed default rules only on first install
+        if (Configuration.Rules.Count == 0)
         {
-            var jsInjectorAssembly = AssemblyLoadContext.All
-                .SelectMany(x => x.Assemblies)
-                .FirstOrDefault(x => x.FullName?.Contains("Jellyfin.Plugin.JavaScriptInjector") ?? false);
-
-            if (jsInjectorAssembly == null)
-            {
-                _logger.LogInformation("JavaScript Injector not found — config UI will not be available.");
-                return;
-            }
-
-            var pluginInterface = jsInjectorAssembly.GetType("Jellyfin.Plugin.JavaScriptInjector.PluginInterface");
-            if (pluginInterface == null)
-            {
-                _logger.LogWarning("JavaScript Injector PluginInterface type not found.");
-                return;
-            }
-
-            var payload = new Newtonsoft.Json.Linq.JObject
-            {
-                { "id", ScriptId },
-                { "name", "Seasonal Visibility Config" },
-                { "script", ConfigScript },
-                { "requiresAuthentication", true }
-            };
-
-            var result = pluginInterface.GetMethod("RegisterScript")?.Invoke(null, new object[] { Id.ToString(), payload });
-            if (result is bool success && success)
-                _logger.LogInformation("Seasonal Visibility: registered config script with JavaScript Injector.");
-            else
-                _logger.LogWarning("Seasonal Visibility: RegisterScript returned false.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Seasonal Visibility: failed to register with JavaScript Injector.");
+            Configuration.Rules.Add(new SeasonRule { Tags = new System.Collections.Generic.List<string> { "christmas" }, Description = "Christmas Season", StartDate = "12-01", EndDate = "01-05" });
+            Configuration.Rules.Add(new SeasonRule { Tags = new System.Collections.Generic.List<string> { "halloween" }, Description = "Halloween Season", StartDate = "10-01", EndDate = "10-31" });
+            Configuration.Rules.Add(new SeasonRule { Tags = new System.Collections.Generic.List<string> { "thanksgiving" }, Description = "Thanksgiving Season", StartDate = "11-15", EndDate = "11-30" });
+            Configuration.Rules.Add(new SeasonRule { Tags = new System.Collections.Generic.List<string> { "summer" }, Description = "Summer Season", StartDate = "06-01", EndDate = "08-31" });
+            SaveConfiguration();
         }
     }
 
@@ -256,23 +428,6 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IDisposable
 
     public void Dispose()
     {
-        try
-        {
-            var jsInjectorAssembly = AssemblyLoadContext.All
-                .SelectMany(x => x.Assemblies)
-                .FirstOrDefault(x => x.FullName?.Contains("Jellyfin.Plugin.JavaScriptInjector") ?? false);
-
-            if (jsInjectorAssembly != null)
-            {
-                var pluginInterface = jsInjectorAssembly.GetType("Jellyfin.Plugin.JavaScriptInjector.PluginInterface");
-                pluginInterface?.GetMethod("UnregisterAllScriptsFromPlugin")?.Invoke(null, new object[] { Id.ToString() });
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Seasonal Visibility: failed to unregister from JavaScript Injector.");
-        }
-
         var config = Configuration;
         var users = _userManager.Users.ToList();
         foreach (var user in users)
@@ -281,7 +436,9 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IDisposable
             if (userDto.Policy?.IsAdministrator == true) continue;
             var policy = userDto.Policy;
             if (policy?.BlockedTags == null) continue;
-            var seasonalTags = config.Rules.Select(r => r.Tag).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var seasonalTags = config.Rules.SelectMany(r => r.Tags)
+                .Concat(config.Rules.SelectMany(r => r.CollectionIds).Select(id => $"__sv_collection_{id}"))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
             var cleanedTags = policy.BlockedTags.Where(t => !seasonalTags.Contains(t)).ToArray();
             if (cleanedTags.Length != policy.BlockedTags.Length)
             {
