@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Seasonal Visibility</title>
+</head>
+<body>
+    <div id="SeasonalVisibilityConfigPage" data-role="page" class="page libraryPage noSecondaryNavPage">
+        <div class="content-primary">
+            <h2>🎄 Seasonal Visibility</h2>
+            <p class="fieldDescription">
+                Hide and show movies &amp; TV shows based on seasonal tags. Content tagged with a season tag
+                will be hidden from non-admin users outside of that season, and revealed during the season.
+            </p>
+
+            <div class="verticalSection">
+                <h3 class="sectionTitle">Season Rules</h3>
+                <p class="fieldDescription">
+                    Each rule maps a tag to a date range (MM-DD format). Content tagged with that tag
+                    will only be visible during that window. Cross-year ranges are supported
+                    (e.g. Dec 1 – Jan 5).
+                </p>
+
+                <table id="rulesTable" class="tblConfigTable" style="width:100%; border-collapse:collapse; margin-bottom:1em;">
+                    <thead>
+                        <tr>
+                            <th style="text-align:left; padding:6px 8px;">Tag</th>
+                            <th style="text-align:left; padding:6px 8px;">Description</th>
+                            <th style="text-align:left; padding:6px 8px;">Start (MM-DD)</th>
+                            <th style="text-align:left; padding:6px 8px;">End (MM-DD)</th>
+                            <th style="text-align:left; padding:6px 8px;">In Season?</th>
+                            <th style="padding:6px 8px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="rulesBody">
+                    </tbody>
+                </table>
+
+                <button type="button" id="addRuleBtn" class="raised button-submit emby-button" style="max-width:200px;">
+                    + Add Rule
+                </button>
+            </div>
+
+            <br/>
+            <div>
+                <button type="button" id="saveBtn" class="raised button-submit block emby-button">
+                    Save
+                </button>
+            </div>
+
+            <div id="saveStatus" style="margin-top:1em;"></div>
+        </div>
+    </div>
+</body>
+</html>
