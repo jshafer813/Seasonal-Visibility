@@ -1,43 +1,34 @@
 name: Release
-
 on:
   push:
     tags:
       - 'v*'
-
 permissions:
   contents: write
-
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.0.x'
-
       - name: Build
         run: dotnet publish -c Release -o ./dist
-
       - name: Get checksum
         id: checksum
         run: |
           MD5=$(md5sum ./dist/Jellyfin.Plugin.SeasonalVisibility.dll | awk '{print $1}')
           echo "md5=$MD5" >> $GITHUB_OUTPUT
-
       - name: Get version
         id: version
         run: |
           VERSION=${GITHUB_REF_NAME#v}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-
       - name: Update manifest
         run: |
           python3 - << 'PYEOF'
@@ -59,15 +50,14 @@ jobs:
           CHECKSUM: ${{ steps.checksum.outputs.md5 }}
           REF: ${{ github.ref_name }}
           REPO: ${{ github.repository }}
-
       - name: Commit updated manifest
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add manifest.json
           git commit -m "Update manifest for ${{ github.ref_name }}" || echo "No changes to commit"
+          git pull --rebase origin main
           git push origin HEAD:main
-
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
