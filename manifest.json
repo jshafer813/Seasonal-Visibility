@@ -13,7 +13,7 @@
         "changelog": "v3.0.0: Multiple tags per rule, rule enable/disable toggle, conflict detection, preview mode, tag suggestions dropdown, activity log, collections support, security fixes.",
         "targetAbi": "10.11.6.0",
         "sourceUrl": "https://github.com/jshafer813/Seasonal-Visibility/releases/download/v3.0.0/Jellyfin.Plugin.SeasonalVisibility.dll",
-        "checksum": "3ecec9229c014705ef5e1f32f9afbbd5",
+        "checksum": "8737080152d2578efed67e33f095007e",
         "timestamp": "2026-03-16T00:00:00Z"
       },
       {
